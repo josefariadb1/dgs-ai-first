@@ -1,7 +1,7 @@
 # Estratégia de Prompt Engineering e Context Engineering — Assistente de Atendimento NovaTech
 
 **Status:** Proposto (v1 do artefato)
-**Autor:** Tech Lead · **Ferramentas usadas:** Claude (chat) para as seções 1, 2 e 4 · GitHub Copilot para o script de teste automatizado (ver seção 3 — gerado à parte, fora deste documento)
+**Autor:** Tech Lead · **Ferramentas usadas:** Claude (chat) para as seções 1, 2 e 4 · GitHub Copilot para o script de teste automatizado ([`script-teste-prompts.py`](script-teste-prompts.py), ver seção 3)
 **Relacionado a:** [ADR-0001](../exercicio-1-1/ADR-0001-escolha-modelo-llm.md) (modelo), [ADR-0002](../exercicio-1-1/ADR-0002-gerenciamento-contexto.md) (orçamento de contexto), [ADR-0003](../exercicio-1-1/ADR-0003-documentos-contraditorios.md) (documentos contraditórios)
 
 ## Por que este documento existe
@@ -28,12 +28,14 @@ prompts/
     system-prompt.v2.md        # vigente
   CHANGELOG.md                 # motivo de cada versão, ligado a um caso de teste
   tests/
-    test_prompt_scenarios.*    # suíte de regressão gerada com o Copilot (seção 3)
+    script-teste-prompts.py    # suíte de regressão gerada com o Copilot (seção 3)
+    casos-anexo-b.json         # cenários reais do projeto, com chunks e gabarito
 ```
 
-Reproduzido neste exercício em [`prompts/`](prompts/) com `system-prompt.v1.md`
-(baseline fornecida) e `system-prompt.v2.md` (versão revisada nesta entrega). O
-script de teste em si é entregue como artefato separado (seção 3).
+Reproduzido neste exercício com `prompts/system-prompt.v1.md` (baseline
+fornecida), `prompts/system-prompt.v2.md` (versão revisada nesta entrega),
+[`script-teste-prompts.py`](script-teste-prompts.py) e
+[`casos-anexo-b.json`](casos-anexo-b.json) (seção 3).
 
 ### 1.2 Nomenclatura e ciclo de vida
 
@@ -130,29 +132,48 @@ Notas sobre a anatomia:
 
 ## 3. Script de teste automatizado
 
-O script de teste é gerado com o **GitHub Copilot** e entregue como artefato
-separado deste documento (fora do escopo desta v1 do texto de estratégia). Ele
-deve seguir o contrato abaixo, para que qualquer implementação do script seja
-compatível com o resto desta estratégia:
+O script [`script-teste-prompts.py`](script-teste-prompts.py) foi gerado com o
+**GitHub Copilot**. Contrato de uso:
 
-- **Entrada:** um prompt versionado (`system-prompt.v1.md` / `v2.md`), um
-  conjunto de cenários derivados do mapa de cobertura do **Anexo B**
-  (pergunta → chunks esperados), e os chunks de referência correspondentes.
+- **Entrada:** um arquivo de prompt (`--prompt-file`, opcionalmente um segundo
+  com `--prompt-file-b` para comparar duas versões lado a lado) e um conjunto
+  de cenários em JSON (`--cases`). [`casos-anexo-b.json`](casos-anexo-b.json)
+  traz os 3 cenários mais críticos identificados no Anexo B, cada um já com os
+  chunks correspondentes embutidos: `devolucao-carga-perigosa` (exceção do
+  POL-001), `sla-platinum-inexistente` (tier que não existe) e
+  `frete-versoes-conflitantes` (PROC-042 vs. PROC-042-v2).
 - **Execução:** para cada cenário, monta o contexto completo (prompt estático
-  + chunks + pergunta) e envia ao LLM — real ou simulado, dependendo do que o
-  ambiente de execução permitir.
-- **Verificação:** aplica checagens **determinísticas** por cenário — presença
-  de citação de fonte reconhecível (`POL-NNN`, `PROC-NNN`, `SLA-NNNN`,
-  `FAQ-NN`), ausência de termos proibidos (ex.: confirmar um tier inexistente,
-  linguagem hedging tipo "acho que"), e regras específicas do cenário (ex.:
-  não afirmar que carga perigosa pode ser devolvida).
-- **Saída esperada:** um relatório comparando `v1` vs `v2` que demonstre que a
-  v2 corrige os cenários em que a v1 falha (ver
-  [Changelog](prompts/CHANGELOG.md) — casos "tier inexistente" e "versões de
-  frete conflitantes") — evidência de que a iteração do prompt resolveu um
+  + chunks do caso + pergunta) e envia ao LLM — via API compatível com OpenAI
+  (`OPENAI_API_KEY`) ou em modo `--mock`, com respostas simuladas que reagem
+  ao **conteúdo** do prompt carregado (não ao nome do arquivo), para que rodar
+  contra v1 e v2 produza resultados realmente diferentes.
+- **Verificação:** checagens **determinísticas** por cenário — presença de
+  citação de fonte, aderência a um padrão de fonte esperado quando declarado
+  (`expected_source_pattern`, ex.: `POL-\d{3}`), ausência de termos proibidos,
+  e presença dos termos esperados na resposta.
+- **Saída:** um relatório por versão de prompt e, quando `--prompt-file-b` é
+  usado, uma tabela de comparação. Executando
+  `python script-teste-prompts.py --mock --cases casos-anexo-b.json --prompt-file prompts/system-prompt.v1.md --prompt-file-b prompts/system-prompt.v2.md`,
+  o resultado confirma a hipótese registrada no
+  [Changelog](prompts/CHANGELOG.md):
+
+  ```
+  Resumo prompts/system-prompt.v1.md: 1/3 aprovados
+  Resumo prompts/system-prompt.v2.md: 3/3 aprovados
+
+  === Comparacao prompts/system-prompt.v1.md vs prompts/system-prompt.v2.md ===
+     devolucao-carga-perigosa: v1=PASS  v2=PASS
+  >> sla-platinum-inexistente: v1=FAIL  v2=PASS
+  >> frete-versoes-conflitantes: v1=FAIL  v2=PASS
+  ```
+
+  A v1 falha exatamente nos dois cenários que motivaram as regras 4 e 5 do
+  `system-prompt.v2.md`; a v2 corrige ambos sem quebrar o cenário que já
+  funcionava — evidência concreta de que a iteração do prompt resolveu um
   problema real, não apenas reescreveu texto.
-- **Escopo:** o script não precisa ser uma suíte de produção completa; o
-  objetivo é demonstrar o conceito de teste de prompt como regressão
+- **Escopo:** o script não é uma suíte de produção completa (o modo `--mock`
+  simula respostas por palavra-chave, não substitui teste contra o LLM real);
+  o objetivo é demonstrar o conceito de teste de prompt como regressão
   automatizada, conforme pedido no enunciado do exercício.
 
 ---
@@ -172,7 +193,7 @@ mas confiável).
 |---|---|---|---|
 | (1) Sempre citar a fonte | Prompt (regra 2, `system-prompt.v2.md`) **+** código | Prompt instrui; **código valida**: resposta é rejeitada/reenviada se não contiver um padrão de citação reconhecível (`POL-\d{3}`, `PROC-\d{3}`, `SLA-\d{4}`, `FAQ-\d+`) | "Citar fonte" é uma checagem de formato — objetiva, fácil de validar por regex. Não há razão para confiar só na instrução. |
 | (2) Nunca inventar prazos/valores | Prompt (regras 1 e 2) **+** código | Prompt instrui a usar só os chunks; **código faz checagem numérica de fundamentação**: todo número/data presente na resposta precisa aparecer em algum chunk do contexto enviado, senão a resposta é sinalizada para revisão | Fidelidade a números é exatamente o tipo de coisa que um LLM pode "arredondar" ou combinar de forma plausível mas errada — a checagem determinística não depende de o modelo "se lembrar" da regra. |
-| (3) Quando não encontrar resposta, dizer explicitamente | Código, **antes** de chamar o LLM | **Determinístico primário**: se o retrieval não retorna nenhum chunk acima do score mínimo, o orquestrador nem chama o LLM — retorna a mensagem de fallback fixa e already aciona o fluxo de escalonamento ao supervisor. O prompt (regra 3) é a rede de segurança para o caso em que chunks fracos passam do limiar mas ainda não respondem à pergunta. | Isso remove o caso mais comum de falha (sem chunk nenhum) da mão do modelo por completo — é mais barato e 100% confiável decidir isso em código do que confiar que o modelo sempre vai admitir "não sei". |
+| (3) Quando não encontrar resposta, dizer explicitamente | Código, **antes** de chamar o LLM | **Determinístico primário**: se o retrieval não retorna nenhum chunk acima do score mínimo, o orquestrador nem chama o LLM — retorna a mensagem de fallback fixa e já aciona o fluxo de escalonamento ao supervisor. O prompt (regra 3) é a rede de segurança para o caso em que chunks fracos passam do limiar mas ainda não respondem à pergunta. | Isso remove o caso mais comum de falha (sem chunk nenhum) da mão do modelo por completo — é mais barato e 100% confiável decidir isso em código do que confiar que o modelo sempre vai admitir "não sei". |
 | (4) Responder em português formal | Prompt (regra 3, formato) **+** código | Prompt instrui o tom; **código faz detecção de idioma** na resposta antes de entregá-la ao atendente, com um retry automático se detectar outro idioma | Guardrail de formato, checável objetivamente sem entender o conteúdo. |
 | Não misturar versões de documento contraditórias ([ADR-0003](../exercicio-1-1/ADR-0003-documentos-contraditorios.md)) | Código **detecta** o conflito, prompt **apresenta** | **Determinístico para detecção**: o orquestrador identifica, antes de montar o contexto, se os chunks recuperados incluem o mesmo `doc_id` em versões diferentes, e marca a query como "em conflito". **Probabilístico para apresentação**: o prompt (regra 4) decide como comunicar isso ao atendente. | A decisão de *que existe* conflito é um fato dos metadados, auditável; a forma de *comunicar* o conflito é redação, que pertence ao prompt. |
 | Não confirmar tier/categoria inexistente (caso "Platinum") | Prompt (regra 5) **+** código | **Determinístico como reforço**: valores de tier mencionados na pergunta são resolvidos contra uma lista fechada (`Gold`, `Silver`, `Standard`) **antes** de chegar ao LLM; se o tier citado não existe, a resposta de "tier inexistente" pode ser dada por código, sem depender do modelo perceber a armadilha sozinho. | Esse é hoje o guardrail mais frágil se deixado só no prompt (a armadilha do Anexo B mostra exatamente esse caso) — uma lista fechada validada em código elimina o risco por completo em vez de reduzi-lo. |
@@ -191,9 +212,10 @@ forma clara para o atendente).
 
 ## Próximos passos (fora do escopo desta v1 do artefato)
 
-- Gerar o script de teste automatizado com o **GitHub Copilot**, seguindo o
-  contrato definido na seção 3, e rodá-lo contra o conjunto completo do
-  Anexo B (não só os cenários críticos citados no Changelog).
+- Rodar o `script-teste-prompts.py` com a API real (`OPENAI_API_KEY`, ou
+  adaptar para o cliente do modelo definido no ADR-0001) contra o conjunto
+  completo do Anexo B — hoje `casos-anexo-b.json` só cobre os 3 cenários mais
+  críticos, não o mapa de cobertura inteiro.
 - Submeter esta v1 a uma rodada de *devil's advocate* com o Claude, no mesmo
   formato usado nas ADRs do Exercício 1.1, antes de marcar como "Aceito".
 - Definir o limiar de score mínimo de retrieval citado na seção 4 (guardrail

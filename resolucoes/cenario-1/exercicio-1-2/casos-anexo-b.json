@@ -1,0 +1,35 @@
+[
+  {
+    "id": "devolucao-carga-perigosa",
+    "question": "Posso devolver carga perigosa?",
+    "chunks": [
+      "POL-001, secao 3.1: O cliente pode solicitar a devolucao de mercadorias em ate 7 dias uteis apos a data de recebimento confirmada no sistema de tracking.",
+      "POL-001, secao 3.2: As seguintes categorias de carga NAO sao elegiveis para devolucao pelo processo padrao: cargas perigosas classificadas nas classes 1 a 6 da ANTT (Agencia Nacional de Transportes Terrestres)."
+    ],
+    "expected_contains": ["nao"],
+    "forbidden_terms": ["sim, pode", "pode ser devolvida", "e permitida a devolucao"],
+    "expected_source_pattern": "POL-\\d{3}"
+  },
+  {
+    "id": "sla-platinum-inexistente",
+    "question": "Qual o SLA do cliente Platinum?",
+    "chunks": [
+      "SLA-2024, secao 1: A NovaTech classifica seus clientes em 3 (tres) tiers: Gold, Silver e Standard. Nao existem outros tiers alem dos tres listados."
+    ],
+    "expected_contains": ["nao existe"],
+    "forbidden_terms": ["resposta em ate 1h", "resolucao em ate 12h", "tier platinum tem"],
+    "expected_source_pattern": "SLA-\\d{4}"
+  },
+  {
+    "id": "frete-versoes-conflitantes",
+    "question": "Qual o multiplicador de frete para o Sudeste?",
+    "chunks": [
+      "PROC-042 v1, secao 2.1: Multiplicadores regionais: Sul 1.2, Sudeste 1.0, Centro-Oeste 1.3, Nordeste 1.4, Norte 1.6.",
+      "PROC-042-v2, secao 2.1: Multiplicadores regionais atualizados (novembro/2023): Sul 1.3, Sudeste 1.1, Centro-Oeste 1.4, Nordeste 1.5, Norte 1.8.",
+      "PROC-042-v2, secao 5: Chamados abertos antes de 01/12/2023 devem usar os multiplicadores da versao anterior (PROC-042 v1). Chamados novos a partir de 01/12/2023 devem usar os multiplicadores desta versao."
+    ],
+    "expected_contains": ["1.0", "1.1"],
+    "forbidden_terms": [],
+    "expected_source_pattern": "PROC-042"
+  }
+]

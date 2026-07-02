@@ -1,8 +1,8 @@
 # Changelog — Prompts do Assistente de Atendimento NovaTech
 
-Formato: cada entrada referencia o cenário de teste que motivou a mudança
-(nomeado conforme convenção `<tema>-<problema>`, a ser implementado no script
-de teste automatizado gerado com o GitHub Copilot — ver seção 3 da
+Formato: cada entrada referencia o cenário de teste que motivou a mudança,
+implementado em [`casos-anexo-b.json`](../casos-anexo-b.json) e executável com
+[`script-teste-prompts.py`](../script-teste-prompts.py) (ver seção 3 da
 [estratégia](../estrategia-prompt-engineering.md)), para manter
 rastreabilidade entre prompt e caso de teste — nenhuma mudança de prompt
 deveria acontecer sem um caso de teste associado (novo ou existente que
@@ -36,6 +36,6 @@ falhou).
   citar fonte, instrução de "se não souber, diga que não sabe".
 - Não tratava: conflito entre versões de documento, tiers/categorias
   inexistentes, nem diferença de confiabilidade entre fonte formal e FAQ.
-- Falha esperada nos cenários `sla-platinum-inexistente` e
-  `frete-versoes-conflitantes` a serem cobertos pelo script de teste
-  automatizado (seção 3 da estratégia).
+- Falha confirmada nos cenários `sla-platinum-inexistente` e
+  `frete-versoes-conflitantes` ao rodar `script-teste-prompts.py --mock
+  --cases casos-anexo-b.json` contra esta versão (ver seção 3 da estratégia).
