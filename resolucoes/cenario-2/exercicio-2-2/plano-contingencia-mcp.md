@@ -78,8 +78,10 @@ Para cada server, três colunas: **como a falha se manifesta** (o que o dev ou o
 |---|---|
 | Como a falha se manifesta | Handshake MCP falha ao conectar (`client.connect` lança erro — cenário diferente dos casos de filesystem, porque aqui é o processo do server que não sobe, não uma tool que responde erro), ou tools de git retornam erro de "not a git repository". |
 | O que o agente DEVE fazer | Avisar que não tem acesso ao histórico/diff/branches e parar de fazer afirmações sobre "o que mudou recentemente" ou "quem commitou X" — essas viram suposição sem a tool. |
-| O que o time faz | Confirma que `python -m mcp_server_git` está instalado no ambiente (é a dependência mais frágil por não ser `npx`, ver seção 4) e que o comando roda a partir da raiz do repositório. |
+| O que o time faz | Confirma que `python -m mcp_server_git` está instalado no ambiente (é a dependência mais frágil por não ser `npx`, ver seção 4) e que o comando roda a partir de um diretório que é, de fato, um repositório Git. |
 | Severidade | Baixa a média — nenhuma resposta ao "cliente" da NovaTech depende de `git`; afeta principalmente Tech Lead/Dev revisando histórico com o agente. |
+
+**Validação real deste caso específico:** ao rodar o health check (Tarefa 2) diretamente contra a cópia de trabalho rastreada deste repositório de exercícios (`resolucoes/cenario-3/exercicio-3-1/novatech-assistant/`, que não tem `.git` próprio — ver nota em [`health-check-execucao.md`](./health-check-execucao.md)), o server `git` falhou exatamente como descrito acima: `FAIL git` / `connect error: MCP error -32000: Connection closed` / `SUMMARY 3/4 servers passed`. Não foi uma simulação — é o comportamento real do `mcp-server-git` ao apontar para um diretório sem repositório Git.
 
 ### `memory` — indisponível
 

@@ -28,8 +28,12 @@ vetorial + semantic ranking, indexer nativo de SharePoint) como vector store/ret
 
 Manter, porém, uma **fina camada de orquestração própria** (no nosso código) responsável
 por: estratégia de chunking, atribuição de metadados de versão/vigência, montagem e
-orçamento de contexto, rerank/multi-query e detecção de conflito. Ou seja: **comprar a
-infraestrutura, construir a lógica de negócio.**
+orçamento de contexto, rerank/multi-query e detecção de conflito. O acesso ao vector
+store/retriever fica **isolado atrás de uma interface estável** nessa camada — para que
+o Azure AI Search possa ser **substituído sem reescrever o resto do pipeline**, caso os
+testes de retrieval do QA (contra o gabarito do Anexo B) mostrem qualidade insuficiente.
+Ou seja: **comprar a infraestrutura, construir a lógica de negócio — e deixar a
+infraestrutura trocável no ponto certo.**
 
 ## Consequências
 
@@ -85,3 +89,17 @@ infraestrutura, construir a lógica de negócio.**
 - *"OCR e tabelas complexas vão custar caro de qualquer forma."* — Verdade, e isso vale
   para build **ou** buy. Não é argumento a favor do open-source; é um custo do domínio que
   o managed ao menos entrega como serviço testado (Document Intelligence).
+
+## Histórico de iterações
+
+- **Iteração 0 — Criação:** decisão managed-first (Azure AI Search + Azure OpenAI) com
+  camada de orquestração própria para chunking, versionamento e contexto; a versão
+  inicial não especificava como o time reagiria se a qualidade do retrieval gerenciado
+  se mostrasse insuficiente — o vector store estava implicitamente fixado ao Azure AI
+  Search.
+- **Iteração 1 — Devil's advocate:** *"E se a qualidade do retrieval gerenciado for
+  pior?"* levou a explicitar, na própria Decisão, que o acesso ao vector store/retriever
+  fica **isolado atrás de uma interface estável** na camada de orquestração — permitindo
+  substituir o Azure AI Search sem reescrever o resto do pipeline, com o gatilho sendo os
+  testes de retrieval do QA contra o gabarito do Anexo B. A decisão managed-first deixou
+  de ser apresentada como definitiva e passou a ser **reversível no ponto certo**.

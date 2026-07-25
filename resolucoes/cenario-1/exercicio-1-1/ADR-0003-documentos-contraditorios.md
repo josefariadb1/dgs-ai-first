@@ -36,8 +36,11 @@ escolha ao LLM:
 
 1. **Versionamento explícito na ingestão.** Cada documento recebe metadados:
    `doc_id` lógico (ex.: `PROC-042`), `versao`, `data_emissao`, `data_vigencia_inicio`,
-   `status` (`vigente` | `substituido` | `transitorio`) e `fonte`. Curadoria humana
-   define `status` quando o documento não traz indicação — esse é um **gap de processo
+   `status` (`vigente` | `substituido` | `transitorio`) e `fonte`. **Por padrão, todo
+   documento entra como `vigente`**; agentes de IA na fase de Intent (discovery)
+   **sinalizam candidatos a conflito** (mesmo `doc_id`/tema com datas de emissão
+   diferentes), e a curadoria humana classifica `status` **apenas nesse subconjunto
+   sinalizado** — não os ~1.250 documentos da base inteira. Esse é um **gap de processo
    da NovaTech que o projeto expõe**, não algo que o RAG adivinha.
 2. **Preferência por versão vigente no retrieval**, mantendo **ambas indexadas**. O
    retriever prioriza a versão `vigente`; versões `substituido`/`transitorio`
@@ -94,3 +97,16 @@ escolha ao LLM:
   o PROC-042-v2 prova que "mais recente" **não é universal** (chamados antigos usam v1).
   Por isso a regra de negócio mora nos metadados/orquestrador, não na heurística do
   modelo.
+
+## Histórico de iterações
+
+- **Iteração 0 — Criação:** decisão de resolver contradições na camada de dados
+  (metadados de versão/vigência, não delegar ao LLM); a versão inicial do item 1 previa
+  **curadoria humana classificando `status` em toda a base** (~1.250 fontes) sempre que
+  o documento não trouxesse vigência declarada.
+- **Iteração 1 — Devil's advocate:** *"Curadoria manual de status não escala para
+  ~1.250 fontes"* levou a revisar o item 1 — a contradição é exceção, não regra, então
+  **agentes de IA na fase de Intent sinalizam candidatos a conflito** (mesmo `doc_id`
+  com datas diferentes) e a curadoria humana passa a classificar **apenas o subconjunto
+  sinalizado**, com todo o restante entrando como `vigente` por padrão. Reduz o esforço
+  de curadoria de "toda a base" para "os casos que o próprio pipeline já suspeita".

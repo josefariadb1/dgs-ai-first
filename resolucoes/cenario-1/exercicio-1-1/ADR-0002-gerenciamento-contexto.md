@@ -32,15 +32,22 @@ janela":
    distribuído em: system prompt + guardrails (~2K, estático), metadados do cliente
    (~0,2K), **chunks recuperados (~4–5K)**, pergunta (~0,2K) e histórico controlado
    (~2–3K). Sobra de janela é margem de segurança, não espaço a ser preenchido.
-2. **Retrieval em duas fases:** buscar top-K amplo (ex.: 15–20 candidatos) no vector
-   store e **reordenar (rerank)** para selecionar os **5–8 chunks** mais relevantes de
-   ~500 tokens. Só os reordenados entram no contexto.
+2. **Retrieval em duas fases, opcional e ativado por flag:** o MVP sobe com **top-K
+   simples** — os 5–8 chunks mais similares direto do vector store, sem segunda fase.
+   Buscar top-K amplo (ex.: 15–20 candidatos) e **reordenar (rerank)** antes de
+   selecionar os 5–8 chunks finais de ~500 tokens é uma capacidade que existe desde já
+   na arquitetura, mas só é **ativada por flag** quando os testes de retrieval do QA
+   mostrarem necessidade (ex.: precisão baixa em perguntas ambíguas). Só os chunks
+   finais (reordenados ou não) entram no contexto.
 3. **Posicionamento contra lost-in-the-middle:** colocar os chunks de maior relevância
    nas **extremidades** do bloco de contexto (mais relevante primeiro e último), e
    manter o bloco pequeno o suficiente para que o "meio" seja curto.
-4. **Perguntas multi-domínio:** detectar/decompor a pergunta em subtemas e fazer
-   **retrieval por subtema** (multi-query), garantindo cobertura mínima de cada domínio
-   antes de montar o contexto, em vez de confiar numa única busca.
+4. **Perguntas multi-domínio, também por flag:** detectar/decompor a pergunta em
+   subtemas e fazer **retrieval por subtema** (multi-query), garantindo cobertura
+   mínima de cada domínio antes de montar o contexto, em vez de confiar numa única
+   busca. Como o rerank do item 2, entra quando os testes do QA mostrarem perguntas
+   multi-domínio (SLA + frete + devolução na mesma pergunta) falhando com busca única
+   — não é requisito do MVP.
 5. **Sessões longas no Teams — combate ao context rot:** tratar cada pergunta como uma
    **query RAG essencialmente stateless**: re-recuperar chunks a cada pergunta e **não
    acumular** todo o histórico. Manter apenas uma janela curta das últimas N trocas e,
@@ -91,3 +98,19 @@ janela":
   Sudeste?')."* — Por isso mantemos uma **janela curta** de histórico e/ou um resumo,
   não zero histórico. O objetivo é evitar acúmulo ilimitado, não eliminar contexto
   conversacional útil.
+
+## Histórico de iterações
+
+- **Iteração 0 — Criação:** orçamento de ~16K tokens definido; a versão inicial descrevia
+  retrieval em duas fases (top-K amplo + rerank) e decomposição multi-query como parte
+  do pipeline **desde o MVP**; sessões longas no Teams eram tratadas como "cada pergunta
+  é totalmente stateless, sem qualquer histórico acumulado".
+- **Iteração 1 — Devil's advocate**, dois ajustes concretos na Decisão:
+  - *"Rerank e multi-query são overengineering para um MVP"* levou a tornar os dois
+    **opcionais, ativados por flag** (itens 2 e 4), entrando só quando os testes de
+    retrieval do QA mostrarem necessidade — deixaram de ser requisito do MVP, viraram
+    ponto de extensão já previsto na arquitetura.
+  - *"Tratar cada pergunta como stateless quebra follow-up"* levou a substituir "zero
+    histórico" por uma **janela curta das últimas N trocas e/ou um resumo da sessão**
+    (item 5) — o re-retrieval a cada pergunta continua (combate ao context rot), mas
+    sem eliminar todo o contexto conversacional útil.
